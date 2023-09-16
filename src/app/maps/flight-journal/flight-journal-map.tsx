@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef } from "react";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
@@ -11,17 +13,11 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import Search from "@arcgis/core/widgets/Search";
 import * as geometryEngine from "@arcgis/core/geometry/geometryEngine";
 import * as projection from "@arcgis/core/geometry/projection";
+import dynamic from "next/dynamic";
 
 let searchWidget: Search;
 let view: MapView;
-
-export const fetchAirportSuggestions = async (input: string) => {
-  const suggestions = await searchWidget.suggest(input);
-  const suggestionArray = suggestions?.results.map((suggestion) =>
-    suggestion?.results.map((s) => s.text)
-  );
-  return suggestionArray || null;
-};
+let fetchAirportSuggestions;
 
 const FlightJournalMap = ({ departingFlightPath }) => {
   const mapRef = useRef(null);
@@ -32,6 +28,13 @@ const FlightJournalMap = ({ departingFlightPath }) => {
     //basemap: "dark-gray-vector",
     basemap: "streets-vector",
   });
+
+  useEffect(() => {
+    // Dynamically import the function when component is mounted on client side
+    import("./fetch-airport-suggestions").then((module) => {
+      fetchAirportSuggestions = module.fetchAirportSuggestions;
+    });
+  }, []);
 
   const flightPathRenderer = new SimpleRenderer({
     symbol: {

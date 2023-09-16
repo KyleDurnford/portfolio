@@ -1,15 +1,15 @@
 "use client";
 
 import "../../globals.css";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { fetchAirportSuggestions } from "./flight-journal-map";
 
 const FlightJournalMap = dynamic(() => import("./flight-journal-map"), {
   ssr: false,
 });
 
 const FlightJournal = () => {
+  const [fetchAirportSuggestions, setFetchAirportSuggestions] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [focusedField, setFocusedField] = useState(null);
   const [layovers, setLayovers] = useState([]);
@@ -21,7 +21,38 @@ const FlightJournal = () => {
     { layovers: null },
     { destination: null },
   ]);
+  const [inputForSuggestions, setInputForSuggestions] = useState("");
   const focusTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    import("./fetch-airport-suggestions").then((module) => {
+      if (isMounted) {
+        setFetchAirportSuggestions(() => module.fetchAirportSuggestions);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const fetchSuggestions = useCallback(
+    async (input) => {
+      if (!fetchAirportSuggestions) return;
+      const newSuggestions = await fetchAirportSuggestions(input);
+      if (newSuggestions) {
+        console.log(newSuggestions);
+        setSuggestions(newSuggestions[1]);
+      }
+    },
+    [fetchAirportSuggestions]
+  );
+
+  useEffect(() => {
+    if (inputForSuggestions) {
+      fetchSuggestions(inputForSuggestions);
+    }
+  }, [inputForSuggestions, fetchSuggestions]);
 
   const handleInputFocus = (field) => {
     setFocusedField(field);
@@ -29,7 +60,6 @@ const FlightJournal = () => {
   };
 
   const handleInputBlur = () => {
-    // Delay hiding the suggestions to allow click event on suggestions to be captured
     focusTimeoutRef.current = setTimeout(() => {
       setShowSuggestions(false);
     }, 200);
@@ -37,8 +67,6 @@ const FlightJournal = () => {
 
   const handleInputChange = async (e: { target: { value: any } }, field) => {
     const input = e.target.value;
-
-    // Update the corresponding input state
     if (field === "origin") setOrigin(input);
     else if (field === "destination") setDestination(input);
     else if (field.startsWith("layover-")) {
@@ -47,16 +75,11 @@ const FlightJournal = () => {
       newLayovers[index] = input;
       setLayovers(newLayovers);
     }
-
-    const inputVal = e.target.value;
-    const newSuggestions = await fetchAirportSuggestions(inputVal);
-    if (newSuggestions) {
-      setSuggestions(newSuggestions[1]);
-    }
+    setInputForSuggestions(input);
   };
 
   const addLayover = () => {
-    setLayovers((prevLayovers) => [...prevLayovers, ""]); // Add a new empty string to the layovers state
+    setLayovers((prevLayovers) => [...prevLayovers, ""]);
   };
 
   const removeLayover = (indexToRemove: number) => {
@@ -79,10 +102,9 @@ const FlightJournal = () => {
     else if (field.startsWith("layover-")) {
       const index = parseInt(field.split("-")[1], 10);
       const newLayovers = [...layovers];
-      newLayovers[index] = suggestion || ""; // set it to empty string if suggestion is undefined
+      newLayovers[index] = suggestion || "";
       setLayovers(newLayovers);
     }
-
     if (focusTimeoutRef.current) {
       clearTimeout(focusTimeoutRef.current);
     }
@@ -113,7 +135,7 @@ const FlightJournal = () => {
           />
           {focusedField === "origin" && showSuggestions && (
             <ul className="flex flex-col rounded cursor-pointer">
-              {suggestions.map((suggestion, i) => (
+              {suggestions?.map((suggestion, i) => (
                 <li
                   onClick={() => handleSuggestionClick(suggestion, "origin")}
                   className="border border-neutral-700 bg-neutral-800 p-2 hover:bg-neutral-600"
@@ -152,7 +174,7 @@ const FlightJournal = () => {
             />
             {focusedField === `layover-${index}` && showSuggestions && (
               <ul className="flex flex-col rounded cursor-pointer">
-                {suggestions.map((suggestion, i) => (
+                {suggestions?.map((suggestion, i) => (
                   <li
                     onClick={() =>
                       handleSuggestionClick(suggestion, `layover-${index}`)
@@ -189,7 +211,7 @@ const FlightJournal = () => {
           />
           {focusedField === "destination" && showSuggestions && (
             <ul className="flex flex-col rounded cursor-pointer">
-              {suggestions.map((suggestion, i) => (
+              {suggestions?.map((suggestion, i) => (
                 <li
                   onClick={() =>
                     handleSuggestionClick(suggestion, "destination")
