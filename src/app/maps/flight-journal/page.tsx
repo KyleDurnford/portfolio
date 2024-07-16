@@ -1,3 +1,4 @@
+//@ts-nocheck
 "use client";
 
 import "../../globals.css";
@@ -37,7 +38,7 @@ const FlightJournal = () => {
   }, []);
 
   const fetchSuggestions = useCallback(
-    async (input) => {
+    async (input: any) => {
       if (!fetchAirportSuggestions) return;
       const newSuggestions = await fetchAirportSuggestions(input);
       if (newSuggestions) {

@@ -10,9 +10,9 @@ const Header = () => {
         <Link href="/projects" className="hover:text-gray-300">
           Projects
         </Link>
-        <Link href="/maps" className="hover:text-gray-300">
+        {/* <Link href="/maps" className="hover:text-gray-300">
           Maps
-        </Link>
+        </Link> */}
       </nav>
     </header>
   );
